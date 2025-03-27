@@ -1,1 +1,0 @@
-const String TOMTOM_API_KEY = "JjQNyPBAPIAAniO66jjStGNbYWAGGpWa";
