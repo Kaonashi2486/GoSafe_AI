@@ -2,7 +2,7 @@ import pandas as pd
 import google.generativeai as genai
 
 # Set up Gemini API
-genai.configure(api_key="AIzaSyA0bOUlMhYmkow2EvVMyV-mGfpLtZeHGoE")  # Replace with your Gemini API key
+genai.configure(api_key="gemini key")  # Replace with your Gemini API key
 
 # Load CSV
 df = pd.read_csv('mumbai_crime_data_updated.csv')  # Replace with your CSV file path

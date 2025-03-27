@@ -1,8 +1,7 @@
 from newsdataapi import NewsDataApiClient
 
-# Initialize the client with your API key
-api = NewsDataApiClient(apikey='pub_71121e6cd6801ed9414b52e8958d8b3278db5')  # Replace 'YOUR_API_KEY' with your actual API key
 
+api = NewsDataApiClient(apikey='livw nes api key')
 # Fetch news articles related to Maharashtra
 response = api.news_api(
     q='Maharashtra',  # Query for Maharashtra

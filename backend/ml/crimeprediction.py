@@ -1,10 +1,9 @@
 import pandas as pd
 import google.generativeai as genai
 
-# Set up Gemini API
-genai.configure(api_key="AIzaSyA0bOUlMhYmkow2EvVMyV-mGfpLtZeHGoE")  # Replace with your Gemini API key
 
-# Define the prompt template
+genai.configure(api_key="ur gemini key")  
+
 prompt_template = """
 You are a CSV data analysis assistant. Your task is to analyze the provided CSV data containing crime records for a specific area.
 Based on the data, predict and analyze the crime trends in the specified area.
