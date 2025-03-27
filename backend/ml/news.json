@@ -1,0 +1,106 @@
+{
+  "news": [
+    {
+      "area": "Andheri",
+      "title": "Andheri Metro Services Delayed",
+      "description": "Commuters faced delays on the Andheri Metro Line due to technical issues. Travelers are advised to use alternate routes.",
+      "url": "https://example.com/andheri-metro-delay"
+    },
+    {
+      "area": "Aram Nagar",
+      "title": "Beach Cleanup Drive in Aram Nagar",
+      "description": "A major beach cleanup is scheduled this weekend in Aram Nagar. Tourists are encouraged to participate in the eco-friendly initiative.",
+      "url": "https://example.com/aramnagar-cleanup"
+    },
+    {
+      "area": "Amboli",
+      "title": "Safety Alert for Solo Travelers in Amboli",
+      "description": "Recent reports suggest an increase in petty theft incidents in Amboli. Travelers are advised to be cautious, especially at night.",
+      "url": "https://example.com/amboli-travel-safety"
+    },
+    {
+      "area": "Chakala",
+      "title": "New Airport Shuttle Service Launched in Chakala",
+      "description": "A new shuttle service has been introduced connecting Chakala Metro Station to Mumbai Airport, improving convenience for travelers.",
+      "url": "https://example.com/chakala-airport-shuttle"
+    },
+    {
+      "area": "D.N. Nagar",
+      "title": "Traffic Congestion Expected Near D.N. Nagar",
+      "description": "Road construction work near D.N. Nagar is causing heavy traffic. Travelers should plan their routes accordingly.",
+      "url": "https://example.com/dn-nagar-traffic"
+    },
+    {
+      "area": "Four Bungalows",
+      "title": "Popular Street Food Market Reopens in Four Bungalows",
+      "description": "After months of renovation, the famous Four Bungalows street food market has reopened. A must-visit for food lovers!",
+      "url": "https://example.com/four-bungalows-food"
+    },
+    {
+      "area": "JB Nagar",
+      "title": "New Budget Hotel Opens in JB Nagar",
+      "description": "A new budget-friendly hotel has opened in JB Nagar, offering affordable accommodation for travelers near the airport.",
+      "url": "https://example.com/jb-nagar-hotel"
+    },
+    {
+      "area": "Kajuwadi",
+      "title": "Travel Warning: Road Closure in Kajuwadi",
+      "description": "Due to ongoing maintenance, a key road in Kajuwadi will remain closed for a week. Commuters should take alternate routes.",
+      "url": "https://example.com/kajuwadi-road-closure"
+    },
+    {
+      "area": "Lokhandwala",
+      "title": "Nightlife in Lokhandwala Attracting More Tourists",
+      "description": "New cafes and pubs have opened in Lokhandwala, making it a lively destination for nightlife enthusiasts.",
+      "url": "https://example.com/lokhandwala-nightlife"
+    },
+    {
+      "area": "Marol",
+      "title": "Best Budget Eateries in Marol for Backpackers",
+      "description": "A guide to the top affordable eateries in Marol, perfect for backpackers and budget travelers.",
+      "url": "https://example.com/marol-food-guide"
+    },
+    {
+      "area": "Mogra Village",
+      "title": "Cultural Festival Announced in Mogra Village",
+      "description": "Mogra Village will host a traditional cultural festival next weekend, featuring local performances and cuisine.",
+      "url": "https://example.com/mogra-village-festival"
+    },
+    {
+      "area": "Model Town",
+      "title": "Bike Rental Service Launched in Model Town",
+      "description": "A new bike rental service has started in Model Town, making it easier for tourists to explore the area.",
+      "url": "https://example.com/model-town-bike-rental"
+    },
+    {
+      "area": "Poonam Nagar",
+      "title": "Safety Advisory: Increased Pickpocketing Cases in Poonam Nagar",
+      "description": "Travelers in Poonam Nagar are advised to be cautious of pickpockets, especially in crowded areas.",
+      "url": "https://example.com/poonam-nagar-safety"
+    },
+    {
+      "area": "Saki Naka",
+      "title": "New Direct Bus Service from Saki Naka to Gateway of India",
+      "description": "A direct bus route has been launched from Saki Naka to Mumbai’s iconic Gateway of India for tourist convenience.",
+      "url": "https://example.com/saki-naka-bus"
+    },
+    {
+      "area": "Seven Bungalows",
+      "title": "Beach Safety Tips for Travelers at Seven Bungalows",
+      "description": "Authorities have issued safety guidelines for tourists visiting the beach at Seven Bungalows due to recent high tides.",
+      "url": "https://example.com/seven-bungalows-beach-safety"
+    },
+    {
+      "area": "Versova",
+      "title": "Versova Jetty to Get New Ferry Services",
+      "description": "New ferry services will soon operate from Versova Jetty, making island hopping more accessible for tourists.",
+      "url": "https://example.com/versova-ferry"
+    },
+    {
+      "area": "SEEPZ",
+      "title": "New Digital Guide App for Tourists Visiting SEEPZ",
+      "description": "A new mobile app has been launched to help tourists navigate SEEPZ, providing historical insights and real-time location guidance.",
+      "url": "https://example.com/seepz-tourist-app"
+    }
+  ]
+}
