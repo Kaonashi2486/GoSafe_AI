@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/hacknova.iml" filepath="$PROJECT_DIR$/hacknova.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android/hacknova_android.iml" filepath="$PROJECT_DIR$/android/hacknova_android.iml" />
+    </modules>
+  </component>
+</project>

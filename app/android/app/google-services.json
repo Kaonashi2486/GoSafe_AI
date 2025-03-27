@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "18565975481",
+    "project_id": "gosafe-ff22d",
+    "storage_bucket": "gosafe-ff22d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:18565975481:android:cdc2f2f5368ca266053a68",
+        "android_client_info": {
+          "package_name": "com.example.hacknova"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyANcmZLZ5J3jCnadOK4jPJqVjt_toi2XIk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
