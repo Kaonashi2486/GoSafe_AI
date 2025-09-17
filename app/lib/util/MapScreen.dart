@@ -1,13 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:hacknova/api/IncidentEvents.dart';
 import 'package:hacknova/api/safetyScore_api.dart';
 import 'package:hacknova/util/RoutingService.dart';
-import 'package:hacknova/util/TOMTOM_API.dart';
-import 'dart:math'; // Import for generating random numbers
+import 'dart:math';
 import 'package:latlong2/latlong.dart';
-import 'package:cached_network_image/cached_network_image.dart'; // For better image handling
+import 'package:cached_network_image/cached_network_image.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -18,7 +16,7 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
-  List<Map<String,String>> incidentList=[];
+  List<Map<String, String>> incidentList = [];
   bool isLoading = false;
   LatLng? currentLocation;
   LatLng? destination;
@@ -30,21 +28,23 @@ class _MapScreenState extends State<MapScreen> {
   final TextEditingController _SourceSetting = TextEditingController();
   List<String> searchSuggestions = [];
   List<double> scoreList = [];
+  bool showRouteSelection = false;
+
   List<Map<String, dynamic>> customMarkers = [
     {
-      'latLng': LatLng(19.213711, 72.864906), // San Francisco coordinates
+      'latLng': LatLng(19.213711, 72.864906),
       'imageUrl': 'https://example.com/image1.jpg',
-      'description': 'Golden Gate Bridge'
+      'description': 'Golden Gate Bridge',
     },
     {
       'latLng': LatLng(19.114424, 72.867943),
-      'imageUrl': 'https://ipfs.io/ipfs/bafybeiccdnqztem7hjfugmcwg62tlo4d3hnz4ieka4yvtofu22frovmh5q',
-      'description': 'Car Crashed Near Highway 2 Injured Help!'
+      'imageUrl':
+          'https://ipfs.io/ipfs/bafybeiccdnqztem7hjfugmcwg62tlo4d3hnz4ieka4yvtofu22frovmh5q',
+      'description': 'Car Crashed Near Highway 2 Injured Help!',
     },
   ];
 
   Map<String, dynamic>? selectedMarker;
-
 
   @override
   void initState() {
@@ -52,23 +52,19 @@ class _MapScreenState extends State<MapScreen> {
     _fetchCurrentLocation();
   }
 
-  // 📍 Fetch User's Location
   Future<void> _fetchCurrentLocation() async {
     LatLng? location = await RoutingService.getCurrentLocation();
-    List<Map<String,String>> temp=await getIncidentDetails();
     if (location != null) {
-      String? name = await RoutingService.getAddressFromCoordinates(location!);
+      String? name = await RoutingService.getAddressFromCoordinates(location);
       setState(() {
         currentLocation = location;
-       incidentList=temp;
         if (name != null) {
-          _searchSourceController.text = name!;
+          _searchSourceController.text = name;
         }
       });
     }
   }
 
-  // 🔎 Fetch Suggested Locations from TomTom
   Future<void> _fetchSearchSuggestions(String query) async {
     if (query.isNotEmpty) {
       List<String> suggestions = await RoutingService.getSearchSuggestions(
@@ -87,12 +83,11 @@ class _MapScreenState extends State<MapScreen> {
 
     if (destinationLocation != null && currentLocation != null) {
       setState(() {
-        currentLocation = destinationLocation!;
+        currentLocation = destinationLocation;
       });
     }
   }
 
-  // 🚀 Fetch Routes with ETA & Distance
   Future<void> _searchDestination() async {
     String query = _searchController.text.trim();
     if (query.isEmpty) return;
@@ -111,55 +106,37 @@ class _MapScreenState extends State<MapScreen> {
 
       if (routePaths.isNotEmpty) {
         setState(() {
-          isLoading = true; // Start loading
+          isLoading = true;
           scoreList.clear();
+          showRouteSelection = false;
         });
 
-        print('demooo');
         double totalSafetyScore = 0.0;
         int numberOfIterations = 0;
 
         for (var route in routePaths) {
-          print('Route details:');
-          List<LatLng> path =
-              route['path']; // List of LatLng for the current route
-
-          // Define the indices for start, middle, and end
+          List<LatLng> path = route['path'];
           int startIndex = 0;
           int endIndex = path.length - 1;
-          int middleIndex =
-              (path.length / 2).floor(); // Use floor to ensure integer index
-
-          // Create a list of the 3 key points: start, middle, and end
-          List<int> keyIndices = [startIndex,middleIndex,endIndex];
+          int middleIndex = (path.length / 2).floor();
+          List<int> keyIndices = [startIndex, middleIndex, endIndex];
 
           for (int index in keyIndices) {
             try {
               LatLng coordinates = path[index];
-              String? address = await RoutingService.getAddressFromCoordinates(
-                coordinates,
-              );
-
-              String? district = await RoutingService.getDistrictFromCoordinates(coordinates);
+              String? district =
+                  await RoutingService.getDistrictFromCoordinates(coordinates);
 
               if (district != null) {
-                print('District: $district');
-
-                // Get the safety score based on the city
                 double safetyScore = double.parse(
                   await sendSafetyScoreRequest(district),
                 );
-
                 totalSafetyScore += safetyScore;
                 numberOfIterations++;
-
-                print('City: $district, Safety Score: $safetyScore');
               }
             } catch (e) {
               totalSafetyScore += 50.0;
               numberOfIterations++;
-              print('Error processing route at index $index: $e');
-              // Optionally, you can log the error or skip this part if any error occurs
             }
           }
 
@@ -171,21 +148,18 @@ class _MapScreenState extends State<MapScreen> {
             scoreList.add(averageSafetyScore);
           });
           numberOfIterations = 0;
-          averageSafetyScore = 0;
+          totalSafetyScore = 0;
         }
 
-        // Calculate the average safety score after the loop
-
-        print('demo end');
         destination = destinationLocation;
         routeAlternatives = _assignColors(routePaths, scoreList);
         selectedRoute = routePaths.first['path'];
 
         setState(() {
-          isLoading = false; // End loading
+          isLoading = false;
+          showRouteSelection = true;
         });
 
-        selectedRoute = routePaths.first['path'];
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _fitRouteInView(selectedRoute);
         });
@@ -198,35 +172,24 @@ class _MapScreenState extends State<MapScreen> {
     List<double> scoreList,
   ) {
     if (routes.isEmpty) return [];
-
-    routes.sort((a, b) => a['eta'].compareTo(b['eta'])); // Sort routes by eta
+    routes.sort((a, b) => a['eta'].compareTo(b['eta']));
 
     return routes.asMap().entries.map((entry) {
       int index = entry.key;
       var route = entry.value;
 
-      Color routeColor = Colors.red; // Default color
-      double safetyScore = scoreList[index]; // Default safety score
+      Color routeColor = Colors.red;
+      double safetyScore = scoreList[index];
 
-      // Determine color and update safety score based on the color
       if (index == 0) {
-        routeColor = Colors.green; // Fastest route
-        safetyScore = _generateRandomSafetyScore(
-          72,
-          93,
-        ); // Random score between 72 and 93
+        routeColor = const Color(0xFF10B981); // Emerald green
+        safetyScore = _generateRandomSafetyScore(72, 93);
       } else if (index == routes.length - 1) {
-        routeColor = Colors.red; // Slowest route
-        safetyScore = _generateRandomSafetyScore(
-          0,
-          39,
-        ); // Random score between 0 and 39
+        routeColor = const Color(0xFFEF4444); // Red
+        safetyScore = _generateRandomSafetyScore(0, 39);
       } else {
-        routeColor = Colors.orange; // Medium speed
-        safetyScore = _generateRandomSafetyScore(
-          41,
-          71,
-        ); // Random score between 41 and 71
+        routeColor = const Color(0xFFF59E0B); // Amber
+        safetyScore = _generateRandomSafetyScore(41, 71);
       }
 
       return {
@@ -234,36 +197,78 @@ class _MapScreenState extends State<MapScreen> {
         "eta": route["eta"],
         "distance": route["distance"],
         "color": routeColor,
-        "name": "Route ${index + 1}", // Assign a name
-        "safetyScore": safetyScore, // Add safety score
+        "name": "Route ${index + 1}",
+        "safetyScore": safetyScore,
       };
     }).toList();
   }
 
-  // Function to generate a random safety score within a given range
   double _generateRandomSafetyScore(int min, int max) {
     final random = Random();
-    return min +
-        random
-            .nextInt(max - min + 1)
-            .toDouble(); // Generate random number within range
+    return min + random.nextInt(max - min + 1).toDouble();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body:
+    var TOMTOM_API_KEY = "5S942FW5vWvlAV9u2hGGEqGUniBut2X9";
+    final size = MediaQuery.of(context).size;
+
+    // Add this after the customMarkers list in your _MapScreenState class
+
+    List<Map<String, dynamic>> safetyHeatmapData = [
+      {
+        'latLng': LatLng(19.076, 72.8777), // Mumbai coordinates
+        'color': Colors.green,
+        'title': 'Bandra West',
+        'safetyScore': 85,
+        'description': 'Low crime area',
+      },
+      {
+        'latLng': LatLng(19.0330, 72.8570), // South Mumbai
+        'color': Colors.orange,
+        'title': 'Colaba',
+        'safetyScore': 65,
+        'description': 'Moderate safety',
+      },
+      {
+        'latLng': LatLng(19.1136, 72.8697), // Andheri
+        'color': Colors.red,
+        'title': 'Andheri East',
+        'safetyScore': 45,
+        'description': 'High crime area',
+      },
+      {
+        'latLng': LatLng(19.0728, 72.8826), // Juhu
+        'color': Colors.green,
+        'title': 'Juhu',
+        'safetyScore': 78,
+        'description': 'Safe residential',
+      },
+      {
+        'latLng': LatLng(19.0176, 72.8562), // Fort
+        'color': Colors.orange,
+        'title': 'Fort',
+        'safetyScore': 60,
+        'description': 'Busy commercial',
+      },
+    ];
+    return Container(
+      color: Colors.black,
+      child:
           currentLocation == null
               ? const Center(
-                child: CircularProgressIndicator(),
-              ) // Show loading until location is fetched
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
               : Stack(
                 children: [
+                  // Map Layer
                   FlutterMap(
-                    mapController: _mapController, // Add this line
+                    mapController: _mapController,
                     options: MapOptions(
                       initialCenter: currentLocation!,
-                      initialZoom: 13,
+                      initialZoom: 15,
                     ),
                     children: [
                       TileLayer(
@@ -271,317 +276,492 @@ class _MapScreenState extends State<MapScreen> {
                             "https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=$TOMTOM_API_KEY",
                       ),
 
-                      if (isLoading)
-                        Container(
-                          color: Colors.black.withOpacity(0.5),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Calculating Safety Scores...',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                      // Safety Heatmap Labels
+                      if (!isLoading && selectedMarker == null)
+                        MarkerLayer(
+                          markers:
+                              safetyHeatmapData
+                                  .map(
+                                    (heatmapData) => Marker(
+                                      width: 140.0,
+                                      height: 60.0,
+                                      point: heatmapData['latLng'],
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.8),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: heatmapData['color'],
+                                            width: 2,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: heatmapData['color']
+                                                  .withOpacity(0.3),
+                                              blurRadius: 8,
+                                              spreadRadius: 2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    heatmapData['title'],
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: heatmapData['color'],
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          6,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    '${heatmapData['safetyScore']}%',
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              heatmapData['description'],
+                                              style: TextStyle(
+                                                color: Colors.grey[300],
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w400,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
                         ),
-
-                      if (currentLocation != null &&  !isLoading && selectedMarker==null)
+                      if (currentLocation != null &&
+                          !isLoading &&
+                          selectedMarker == null)
                         MarkerLayer(
                           markers: [
                             Marker(
-                              width: 40.0,
-                              height: 40.0,
+                              width: 50.0,
+                              height: 50.0,
                               point: currentLocation!,
-                              child: const Icon(
-                                Icons.my_location,
-                                color: Colors.blue,
-                                size: 30,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 3,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 8,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.my_location,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
                               ),
                             ),
                           ],
                         ),
+
+                      // Destination Marker
                       if (destination != null)
                         MarkerLayer(
                           markers: [
                             Marker(
-                              width: 40.0,
-                              height: 40.0,
+                              width: 50.0,
+                              height: 50.0,
                               point: destination!,
-                              child: const Icon(
-                                Icons.location_pin,
-                                color: Colors.red,
-                                size: 30,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEF4444),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 3,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 8,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.location_on,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
                               ),
                             ),
                           ],
                         ),
 
-                      if (!isLoading && selectedMarker==null)
-                      PolylineLayer(
-                        polylines:
-                            routeAlternatives.map((route) {
-                              bool isSelected = selectedRoute == route['path'];
-
-                              return Polyline(
-                                points: route['path'],
-                                color:
-                                    isSelected
-                                        ? route['color']
-                                        : Colors.grey.withOpacity(
-                                          0.5,
-                                        ), // Dim others
-                                strokeWidth:
-                                    isSelected
-                                        ? 5.0
-                                        : 2.5, // Highlight selected
-                              );
-                            }).toList(),
-                      ),
-
-                    if(!isLoading)
-                      MarkerLayer(
-                        markers: customMarkers.map((markerData) => Marker(
-                          width: 50,  // Marker size
-                          height: 50,
-                          point: markerData['latLng'],
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                selectedMarker = markerData;
-                              });
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.white, width: 2),
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: [
-                                  BoxShadow(
-                                      color: Colors.black26,
-                                      blurRadius: 6,
-                                      spreadRadius: 2)
-                                ],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  markerData['imageUrl'],
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          ),
-                        )).toList(),
-                      ),
-
-
-                      if (selectedMarker != null)
-                        Positioned(
-                          bottom: 100,
-                          left: 20,
-                          right: 20,
-                          child: GestureDetector(
-                            onTap: () => setState(() => selectedMarker = null),
-                            child: Card(
-                              elevation: 8,
-                              child: Column(
-                                children: [
-                                  Container(
-                                    height: 200,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(4),
-                                      image: DecorationImage(
-                                        image: NetworkImage(selectedMarker!['imageUrl']),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: EdgeInsets.fromLTRB(10, 60, 10, 50),
-                                    child: Text(
-                                      selectedMarker!['description'],
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                      // Route Polylines
+                      if (!isLoading && selectedMarker == null)
+                        PolylineLayer(
+                          polylines:
+                              routeAlternatives.map((route) {
+                                bool isSelected =
+                                    selectedRoute == route['path'];
+                                return Polyline(
+                                  points: route['path'],
+                                  color:
+                                      isSelected
+                                          ? route['color']
+                                          : route['color'].withOpacity(0.4),
+                                  strokeWidth: isSelected ? 6.0 : 4.0,
+                                );
+                              }).toList(),
                         ),
 
+                      // Custom Markers
+                      if (!isLoading)
+                        MarkerLayer(
+                          markers:
+                              customMarkers
+                                  .map(
+                                    (markerData) => Marker(
+                                      width: 60,
+                                      height: 60,
+                                      point: markerData['latLng'],
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            selectedMarker = markerData;
+                                          });
+                                        },
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.white,
+                                              width: 3,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black26,
+                                                blurRadius: 8,
+                                                spreadRadius: 2,
+                                              ),
+                                            ],
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              9,
+                                            ),
+                                            child: Image.network(
+                                              markerData['imageUrl'],
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                        ),
 
-                      if (selectedRoute.isNotEmpty && !isLoading && selectedMarker==null)
+                      // Safety Score Display
+                      if (selectedRoute.isNotEmpty &&
+                          !isLoading &&
+                          selectedMarker == null)
                         MarkerLayer(
                           markers: [
                             Marker(
-                              width: 200.0,
+                              width: 160.0,
                               height: 40.0,
-                              point:
-                                  selectedRoute[selectedRoute.length ~/
-                                      2], // Midpoint of route
+                              point: selectedRoute[selectedRoute.length ~/ 2],
                               child: Container(
-                                padding: const EdgeInsets.all(5),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: Colors.black87,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 1,
+                                  ),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black26,
-                                      blurRadius: 5,
+                                      blurRadius: 8,
                                     ),
                                   ],
                                 ),
                                 child: Center(
                                   child: Text(
-                                    "  Safety Score: ${routeAlternatives.firstWhere((route) => route['path'] == selectedRoute)['safetyScore']}",
+                                    "Safety: ${routeAlternatives.firstWhere((route) => route['path'] == selectedRoute)['safetyScore'].toInt()}%",
                                     style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-
-
                           ],
-
                         ),
                     ],
                   ),
 
-                  // 🔍 Centered Search Bar
-                  if(selectedMarker==null)
-                    Positioned(
-                      top: 20,
-                      left: 0,
-                      right: 0,
+                  // Loading Overlay
+                  if (isLoading)
+                    Container(
+                      color: Colors.black.withOpacity(0.7),
                       child: Center(
-                        child: Column(
-                          children: [
-                            SizedBox(
-                              width: 300, // Adjust width for centering effect
-                              child: Autocomplete<String>(
-                                optionsBuilder: (TextEditingValue textEditingValue) async {
-                                  if (textEditingValue.text.isEmpty) {
-                                    return const Iterable<String>.empty();
-                                  }
-                                  await _fetchSearchSuggestions(textEditingValue.text);
-                                  return searchSuggestions;
-                                },
-                                onSelected: (String selection) async {
-                                  _SourceSetting.text = selection;
-                                  await changeSource();
-                                },
-                                fieldViewBuilder: (
-                                    BuildContext context,
-                                    TextEditingController fieldTextEditingController,
-                                    FocusNode fieldFocusNode,
-                                    VoidCallback onFieldSubmitted,
-                                    ) {
-                                  fieldTextEditingController.text = _searchSourceController.text;
-                                  return CupertinoTextField(
-                                    controller: fieldTextEditingController,
-                                    focusNode: fieldFocusNode,
-                                    placeholder: "Enter Source...",
-                                    padding: const EdgeInsets.all(14),
-                                    style: const TextStyle(
-                                      color: CupertinoColors.white,
-                                      fontSize: 16,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: CupertinoColors.darkBackgroundGray,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  );
-                                },
-                                optionsViewBuilder: (
-                                    BuildContext context,
-                                    AutocompleteOnSelected<String> onSelected,
-                                    Iterable<String> options,
-                                    ) {
-                                  return Align(
-                                    alignment: Alignment.topCenter,
-                                    child: Material(
-                                      color: Colors.transparent,
-                                      child: Container(
-                                        width: 300, // Ensure dropdown width matches the text field
-                                        decoration: BoxDecoration(
-                                          color: CupertinoColors.darkBackgroundGray,
-                                          borderRadius: BorderRadius.circular(12),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: CupertinoColors.black.withOpacity(0.1),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
-                                        child: ListView.builder(
-                                          padding: EdgeInsets.zero,
-                                          shrinkWrap: true,
-                                          itemCount: options.length,
-                                          itemBuilder: (BuildContext context, int index) {
-                                            final String option = options.elementAt(index);
-                                            return CupertinoButton(
-                                              padding: const EdgeInsets.symmetric(
-                                                  vertical: 12, horizontal: 16),
-                                              onPressed: () => onSelected(option),
-                                              child: Align(
-                                                alignment: Alignment.centerLeft,
-                                                child: Text(
-                                                  option,
-                                                  style: const TextStyle(
-                                                    color: CupertinoColors.white,
-                                                    fontSize: 16,
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 16,
+                                spreadRadius: 4,
                               ),
-                            ),
-                            const SizedBox(height: 10),
-                          ],
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.black,
+                                ),
+                                strokeWidth: 3,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Finding safest routes...',
+                                style: TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
 
-                if(selectedMarker==null)
-                  // 🔍 Centered Autocomplete Search Bar
-                  Positioned(
-                    top: 80,
-                    left: 0,
-                    right: 0,
-                    child: Center(
+                  // Selected Marker Details
+                  if (selectedMarker != null)
+                    Positioned(
+                      bottom: 80,
+                      left: 16,
+                      right: 16,
+                      child: GestureDetector(
+                        onTap: () => setState(() => selectedMarker = null),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 16,
+                                spreadRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                height: 200,
+                                decoration: BoxDecoration(
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(16),
+                                  ),
+                                  image: DecorationImage(
+                                    image: NetworkImage(
+                                      selectedMarker!['imageUrl'],
+                                    ),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Text(
+                                  selectedMarker!['description'],
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Top Search Bars
+                  if (selectedMarker == null)
+                    Positioned(
+                      top: MediaQuery.of(context).padding.top + 16,
+                      left: 16,
+                      right: 16,
                       child: Column(
                         children: [
-                          SizedBox(
-                            width: 300, // Adjust width for centering effect
+                          // Source Input
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
                             child: Autocomplete<String>(
-                              optionsBuilder: (TextEditingValue textEditingValue) async {
+                              optionsBuilder: (
+                                TextEditingValue textEditingValue,
+                              ) async {
                                 if (textEditingValue.text.isEmpty) {
                                   return const Iterable<String>.empty();
                                 }
-                                await _fetchSearchSuggestions(textEditingValue.text);
+                                await _fetchSearchSuggestions(
+                                  textEditingValue.text,
+                                );
+                                return searchSuggestions;
+                              },
+                              onSelected: (String selection) async {
+                                _SourceSetting.text = selection;
+                                await changeSource();
+                              },
+                              fieldViewBuilder: (
+                                context,
+                                fieldController,
+                                focusNode,
+                                onFieldSubmitted,
+                              ) {
+                                fieldController.text =
+                                    _searchSourceController.text;
+                                return CupertinoTextField(
+                                  controller: fieldController,
+                                  focusNode: focusNode,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black87,
+                                  ),
+                                  placeholder: "From",
+                                  placeholderStyle: TextStyle(
+                                    color: Colors.grey[500],
+                                  ),
+                                  prefix: Padding(
+                                    padding: const EdgeInsets.only(
+                                      left: 16,
+                                      right: 8,
+                                    ),
+                                    child: Icon(
+                                      Icons.my_location,
+                                      color: Colors.blue[600],
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
+                                  decoration: const BoxDecoration(),
+                                );
+                              },
+                              optionsViewBuilder: (
+                                context,
+                                onSelected,
+                                options,
+                              ) {
+                                return _buildSuggestionsList(
+                                  context,
+                                  onSelected,
+                                  options,
+                                );
+                              },
+                            ),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          // Destination Input
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: Autocomplete<String>(
+                              optionsBuilder: (
+                                TextEditingValue textEditingValue,
+                              ) async {
+                                if (textEditingValue.text.isEmpty) {
+                                  return const Iterable<String>.empty();
+                                }
+                                await _fetchSearchSuggestions(
+                                  textEditingValue.text,
+                                );
                                 return searchSuggestions;
                               },
                               onSelected: (String selection) {
@@ -589,448 +769,247 @@ class _MapScreenState extends State<MapScreen> {
                                 _searchDestination();
                               },
                               fieldViewBuilder: (
-                                  BuildContext context,
-                                  TextEditingController fieldTextEditingController,
-                                  FocusNode fieldFocusNode,
-                                  VoidCallback onFieldSubmitted,
-                                  ) {
+                                context,
+                                fieldController,
+                                focusNode,
+                                onFieldSubmitted,
+                              ) {
                                 return CupertinoTextField(
-                                  controller: fieldTextEditingController,
-                                  focusNode: fieldFocusNode,
-                                  placeholder: "Enter destination...",
-                                  padding: const EdgeInsets.all(14),
+                                  controller: fieldController,
+                                  focusNode: focusNode,
                                   style: const TextStyle(
-                                    color: CupertinoColors.white,
                                     fontSize: 16,
+                                    color: Colors.black87,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: CupertinoColors.darkBackgroundGray,
-                                    borderRadius: BorderRadius.circular(12),
+                                  placeholder: "Where to?",
+                                  placeholderStyle: TextStyle(
+                                    color: Colors.grey[500],
                                   ),
+                                  prefix: Padding(
+                                    padding: const EdgeInsets.only(
+                                      left: 16,
+                                      right: 8,
+                                    ),
+                                    child: Icon(
+                                      Icons.location_on,
+                                      color: Colors.red[600],
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
+                                  decoration: const BoxDecoration(),
                                 );
                               },
                               optionsViewBuilder: (
-                                  BuildContext context,
-                                  AutocompleteOnSelected<String> onSelected,
-                                  Iterable<String> options,
-                                  ) {
-                                return Align(
-                                  alignment: Alignment.topCenter,
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: Container(
-                                      width: 300, // Ensuring dropdown width matches text field
-                                      decoration: BoxDecoration(
-                                        color: CupertinoColors.darkBackgroundGray,
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: CupertinoColors.black.withOpacity(0.1),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: ListView.builder(
-                                        padding: EdgeInsets.zero,
-                                        shrinkWrap: true,
-                                        itemCount: options.length,
-                                        itemBuilder: (BuildContext context, int index) {
-                                          final String option = options.elementAt(index);
-                                          return CupertinoButton(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 12, horizontal: 16),
-                                            onPressed: () => onSelected(option),
-                                            child: Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: Text(
-                                                option,
-                                                style: const TextStyle(
-                                                  color: CupertinoColors.white,
-                                                  fontSize: 16,
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
+                                context,
+                                onSelected,
+                                options,
+                              ) {
+                                return _buildSuggestionsList(
+                                  context,
+                                  onSelected,
+                                  options,
                                 );
                               },
                             ),
                           ),
-                          const SizedBox(height: 10),
                         ],
                       ),
                     ),
-                  ),
 
-
-                  // 🛣️ Route Selection UI (Centered & Styled)
-                  if (routeAlternatives.isNotEmpty && !isLoading && selectedMarker==null)
+                  // Travel Mode Selection
+                  if (selectedMarker == null && !isLoading)
                     Positioned(
-                      bottom: 250,
+                      bottom: 110,
                       left: 20,
                       right: 20,
-                      child: Material(
-                        color: Colors.transparent, // Prevents shadow issues
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 16,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black26,
-                                    blurRadius: 5,
-                                    spreadRadius: 2,
-                                    offset: Offset(0, 3),
-                                  ),
-                                ],
+                            if (showRouteSelection) ...[
+                              Text(
+                                "Route Options",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
                               ),
-                              child: ClipRect(
-                                clipBehavior:
-                                    Clip.none, // Prevents dropdown from being cut off
-                                child: ExpansionTile(
-                                  initiallyExpanded: false,
-                                  title: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        "Selected Route",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      Icon(
-                                        Icons.keyboard_arrow_down,
-                                        color: Colors.black54,
-                                      ),
-                                    ],
-                                  ),
-                                  children: [
-                                    // Show the selected route first
-                                    GestureDetector(
-                                      onTap: () {},
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 90,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: routeAlternatives.length,
+                                  separatorBuilder:
+                                      (context, index) =>
+                                          const SizedBox(width: 12),
+                                  itemBuilder: (context, index) {
+                                    final route = routeAlternatives[index];
+                                    final isSelected =
+                                        route['path'] == selectedRoute;
+
+                                    return GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          selectedRoute = route['path'];
+                                        });
+                                      },
                                       child: Container(
-                                        margin: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 5,
-                                        ),
-                                        padding: const EdgeInsets.all(10),
+                                        width: 120,
+                                        padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
                                           color:
-                                              selectedRoute != null
-                                                  ? routeAlternatives
-                                                      .firstWhere(
-                                                        (route) =>
-                                                            route['path'] ==
-                                                            selectedRoute,
-                                                      )['color']
-                                                      .withOpacity(0.9)
-                                                  : Colors.white,
+                                              isSelected
+                                                  ? route['color'].withOpacity(
+                                                    0.1,
+                                                  )
+                                                  : Colors.grey[50],
                                           borderRadius: BorderRadius.circular(
-                                            10,
+                                            12,
                                           ),
                                           border: Border.all(
-                                            color: Colors.white,
-                                            width: 2,
+                                            color:
+                                                isSelected
+                                                    ? route['color']
+                                                    : Colors.grey[300]!,
+                                            width: isSelected ? 2 : 1,
                                           ),
                                         ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  "Selected: Route ${routeAlternatives.indexWhere((route) => route['path'] == selectedRoute) + 1}",
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 16,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 5),
-                                                Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.access_time,
-                                                      size: 16,
-                                                      color: Colors.white,
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      "${routeAlternatives.firstWhere((route) => route['path'] == selectedRoute)['eta']} min",
-                                                      style: const TextStyle(
-                                                        fontSize: 14,
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.route,
-                                                      size: 16,
-                                                      color: Colors.white,
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      () {
-                                                        print(
-                                                          "Selected route: $selectedRoute",
-                                                        );
-                                                        print(
-                                                          "Available route alternatives: ${routeAlternatives}",
-                                                        );
-
-                                                        var selectedRouteData =
-                                                            routeAlternatives.firstWhere(
-                                                              (route) {
-                                                                print(
-                                                                  "Checking route: ${route['path']}",
-                                                                );
-                                                                return route['path'] ==
-                                                                    selectedRoute;
-                                                              },
-                                                              orElse: () {
-                                                                print(
-                                                                  "No matching route found",
-                                                                );
-                                                                return {
-                                                                  'path': 'N/A',
-                                                                  'distance': 0,
-                                                                }; // Temporary Map<String, dynamic>
-                                                              },
-                                                            );
-
-                                                        if (selectedRouteData !=
-                                                            null) {
-                                                          print(
-                                                            "Found route with distance: ${selectedRouteData['distance']}",
-                                                          );
-                                                          return "${selectedRouteData['distance']} km";
-                                                        } else {
-                                                          print(
-                                                            "Route not found for the selected route",
-                                                          );
-                                                          return "Route not found";
-                                                        }
-                                                      }(),
-                                                      style: const TextStyle(
-                                                        fontSize: 14,
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
+                                            Text(
+                                              "Route ${index + 1}",
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color:
+                                                    isSelected
+                                                        ? route['color']
+                                                        : Colors.black87,
+                                                fontSize: 12,
+                                              ),
                                             ),
-                                            Icon(
-                                              Icons.directions,
-                                              size: 30,
-                                              color: Colors.white,
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              "${route['eta']} min",
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                            Text(
+                                              "${route['distance']} km",
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey[600],
+                                              ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                    ),
-
-                                    // Dropdown options for other routes
-                                    SingleChildScrollView(
-                                      child: Column(
-                                        children: List.generate(routeAlternatives.length, (
-                                          index,
-                                        ) {
-                                          var route = routeAlternatives[index];
-
-                                          // Skip the selected route in the dropdown
-                                          if (route['path'] == selectedRoute)
-                                            return SizedBox.shrink();
-
-                                          return GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                selectedRoute = route['path'];
-                                              });
-                                            },
-                                            child: Container(
-                                              margin:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 5,
-                                                  ),
-                                              padding: const EdgeInsets.all(10),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                border: Border.all(
-                                                  color: Colors.grey.shade300,
-                                                ),
-                                              ),
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                children: [
-                                                  Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        "Route ${index + 1}",
-                                                        style: TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 16,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 5),
-                                                      Row(
-                                                        children: [
-                                                          Icon(
-                                                            Icons.access_time,
-                                                            size: 16,
-                                                            color:
-                                                                Colors.black54,
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 4,
-                                                          ),
-                                                          Text(
-                                                            "${route['eta']} min",
-                                                            style:
-                                                                const TextStyle(
-                                                                  fontSize: 14,
-                                                                  color:
-                                                                      Colors
-                                                                          .black,
-                                                                ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      Row(
-                                                        children: [
-                                                          Icon(
-                                                            Icons.route,
-                                                            size: 16,
-                                                            color:
-                                                                Colors.black54,
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 4,
-                                                          ),
-                                                          Text(
-                                                            "${route['distance']} km",
-                                                            style:
-                                                                const TextStyle(
-                                                                  fontSize: 14,
-                                                                  color:
-                                                                      Colors
-                                                                          .black,
-                                                                ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Icon(
-                                                    Icons.directions,
-                                                    size: 30,
-                                                    color: Colors.black54,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          );
-                                        }),
-                                      ),
-                                    ),
-                                  ],
+                                    );
+                                  },
                                 ),
                               ),
+                              const SizedBox(height: 16),
+                            ],
+
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildTravelModeButton(
+                                  "car",
+                                  Icons.directions_car,
+                                  "Car",
+                                ),
+                                _buildTravelModeButton(
+                                  "motorcycle",
+                                  Icons.motorcycle,
+                                  "Bike",
+                                ),
+                                _buildTravelModeButton(
+                                  "pedestrian",
+                                  Icons.directions_walk,
+                                  "Walk",
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
                     ),
-
-                  // 🚗 Travel Mode Selection with Background
-                if(selectedMarker==null)
-                  isLoading
-                      ? SizedBox()// Show loading until location is fetched
-                      :Positioned(
-                    bottom: 100,
-                    left: 20,
-                    right: 20,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 5,
-                            spreadRadius: 2,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            "Select Transport Mode",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _buildTravelModeButton(
-                                "car",
-                                Icons.directions_car,
-                                "Car",
-                              ),
-                              _buildTravelModeButton(
-                                "motorcycle",
-                                Icons.motorcycle,
-                                "Bike",
-                              ),
-                              _buildTravelModeButton(
-                                "pedestrian",
-                                Icons.directions_walk,
-                                "Walk",
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 ],
               ),
     );
   }
 
-  // 🚘 Helper Widget for Travel Mode Buttons
+  Widget _buildSuggestionsList(
+    BuildContext context,
+    Function(String) onSelected,
+    Iterable<String> options,
+  ) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          width: MediaQuery.of(context).size.width - 32,
+          constraints: const BoxConstraints(maxHeight: 200),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: ListView.separated(
+            padding: EdgeInsets.zero,
+            shrinkWrap: true,
+            itemCount: options.length,
+            separatorBuilder:
+                (context, index) => Divider(height: 1, color: Colors.grey[200]),
+            itemBuilder: (context, index) {
+              final option = options.elementAt(index);
+              return ListTile(
+                dense: true,
+                title: Text(
+                  option,
+                  style: const TextStyle(fontSize: 14, color: Colors.black87),
+                ),
+                onTap: () => onSelected(option),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTravelModeButton(String mode, IconData icon, String label) {
+    final isSelected = selectedTravelMode == mode;
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -1038,37 +1017,34 @@ class _MapScreenState extends State<MapScreen> {
         });
         _searchDestination();
       },
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color:
-                  selectedTravelMode == mode
-                      ? Colors.black
-                      : Colors.grey.shade200,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.black : Colors.grey[100],
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isSelected ? Colors.black : Colors.grey[300]!,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
               icon,
-              size: 30,
-              color:
-                  selectedTravelMode == mode
-                      ? Colors.white
-                      : Colors.grey.shade600,
+              size: 20,
+              color: isSelected ? Colors.white : Colors.grey[700],
             ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            label,
-            style: TextStyle(
-              color:
-                  selectedTravelMode == mode
-                      ? Colors.white
-                      : Colors.grey.shade600,
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey[700],
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1076,18 +1052,17 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     _mapController.dispose();
+    _searchController.dispose();
+    _searchSourceController.dispose();
+    _SourceSetting.dispose();
     super.dispose();
   }
 
   void _fitRouteInView(List<LatLng> path) {
     if (path.isEmpty) return;
-
     final bounds = LatLngBounds.fromPoints(path);
     _mapController.fitCamera(
-      CameraFit.bounds(
-        bounds: bounds,
-        padding: const EdgeInsets.all(50),
-      ),
+      CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)),
     );
   }
 }

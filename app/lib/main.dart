@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hacknova/util/RoutingService.dart';
 import 'package:hacknova/view/DetailView.dart';
 import 'package:hacknova/view/SignIn.dart';
-import 'package:image_picker/image_picker.dart'
-    as image_picker; // Aliased// Assuming SignUpPage is already built
+import 'package:image_picker/image_picker.dart' as image_picker;
 import 'package:hacknova/view/Homepage.dart';
 import 'package:hacknova/model/user_model.dart';
 import 'package:hacknova/util/locator.dart';
@@ -14,55 +13,42 @@ import 'package:hacknova/Navigation/FloatingBottomNavigationBar.dart';
 import 'package:hacknova/view/MapView.dart';
 import 'package:hacknova/view/ProfileView.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+// import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 
-import 'api/IncidentEvents.dart';
-import 'api/PhotoDetail.dart';
+import 'Navigation/CustomAppBar.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   setupLocator();
-  runApp(const MyApp());
+  runApp(const NavRakshakApp());
 }
 
 void setup(username, password) async {
-  MapboxOptions.setAccessToken(
-    "pk.eyJ1Ijoia2dkNTQ2IiwiYSI6ImNtN2VoczY0MjBlYTkya3B4OTFhaWpnaXUifQ.T9ETlbj8TasSZsjbFpIXGg",
-  );
+  // MapboxOptions.setAccessToken(
+  //   "pk.eyJ1Ijoia2dkNTQ2IiwiYSI6ImNtN2VoczY0MjBlYTkya3B4OTFhaWpnaXUifQ.T9ETlbj8TasSZsjbFpIXGg",
+  // );
   var userDataService = locator<UserDataService>();
-
-  // Set username and password
   await userDataService.setUserData(username, password);
   return;
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class NavRakshakApp extends StatelessWidget {
+  const NavRakshakApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'GoSafeAI',
-      theme: ThemeData(
-        brightness: Brightness.dark, // Dark theme
-        primaryColor: Colors.grey.shade900, // Primary color
-        scaffoldBackgroundColor:
-            Colors.grey.shade900, // Dark blue background color
-        appBarTheme: AppBarTheme(
-          backgroundColor: Color(0xFF0D47A1), // Darker blue for app bar
-          centerTitle: true,
-        ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: Colors.blueGrey,
-        ),
-        colorScheme: ColorScheme.dark().copyWith(
-          primary: Colors.blue.shade300,
-          secondary: Colors.deepOrange,
-        ),
+    return CupertinoApp(
+      title: 'NavRakshak',
+      theme: const CupertinoThemeData(
+        brightness: Brightness.dark,
+        primaryColor: CupertinoColors.systemBlue,
+        scaffoldBackgroundColor: Color(0xFF000000),
+        barBackgroundColor: Color(0xFF1C1C1E),
+        textTheme: CupertinoTextThemeData(primaryColor: CupertinoColors.white),
       ),
-      debugShowCheckedModeBanner: false, // Remove the debug banner
+      debugShowCheckedModeBanner: false,
       home: const SignInPage(),
     );
   }
@@ -71,6 +57,7 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   final String username;
   final String password;
+
   const MyHomePage({
     super.key,
     required this.title,
@@ -87,49 +74,136 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _index = 0;
   LatLng? currentLocation;
-  final image_picker.ImagePicker _picker =
-      image_picker.ImagePicker(); // Use aliased ImagePicker
+  final image_picker.ImagePicker _picker = image_picker.ImagePicker();
+
+  @override
+  void initState() {
+    setup(widget.username, widget.password);
+    super.initState();
+    _checkLoginStatus();
+    _fetchCurrentLocation();
+  }
 
   Future<void> _fetchCurrentLocation() async {
     LatLng? location = await RoutingService.getCurrentLocation();
-    List<Map<String,String>> temp=await getIncidentDetails();
     if (location != null) {
-      String? name = await RoutingService.getAddressFromCoordinates(location!);
+      String? name = await RoutingService.getAddressFromCoordinates(location);
       setState(() {
         currentLocation = location;
       });
     }
   }
 
-  // Function to open the camera and pick an image
   Future<void> _pickImage() async {
     try {
-      // Request camera permission
       var status = await Permission.camera.request();
 
       if (status.isGranted) {
-        // Open the camera to take a picture
         image_picker.XFile? pickedFile = await _picker.pickImage(
           source: image_picker.ImageSource.camera,
+          imageQuality: 85,
         );
 
         if (pickedFile != null) {
           File imageFile = File(pickedFile.path);
-          reportIncident(imageFile, currentLocation!.latitude.toString(),currentLocation!.longitude.toString(), 'temporary addition');
+          await _processIncidentImage(imageFile);
         }
       } else {
-        print("Camera permission denied.");
+        _showPermissionDeniedDialog();
       }
     } catch (e) {
-      print('Error picking image: $e');
+      _showErrorDialog('Error accessing camera: $e');
     }
   }
 
-  // Placeholder for sending the image to the backend
-  Future<void> _sendImageToBackend(File imageFile) async {
-    // Here you can send the image to the backend
-    // For now, we are just printing the path
-    print('Image picked: ${imageFile.path}');
+  Future<void> _processIncidentImage(File imageFile) async {
+    // Show loading indicator
+    showCupertinoDialog(
+      context: context,
+      builder:
+          (context) => const CupertinoAlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CupertinoActivityIndicator(),
+                SizedBox(height: 16),
+                Text('Processing incident report...'),
+              ],
+            ),
+          ),
+    );
+
+    try {
+      // Process the incident image
+      // await reportIncident(imageFile, currentLocation!.latitude.toString(),
+      //     currentLocation!.longitude.toString(), 'Incident report');
+
+      Navigator.pop(context); // Close loading dialog
+      _showSuccessDialog('Incident reported successfully');
+    } catch (e) {
+      Navigator.pop(context); // Close loading dialog
+      _showErrorDialog('Failed to report incident: $e');
+    }
+  }
+
+  void _showPermissionDeniedDialog() {
+    showCupertinoDialog(
+      context: context,
+      builder:
+          (context) => CupertinoAlertDialog(
+            title: const Text('Camera Permission Required'),
+            content: const Text(
+              'NavRakshak needs camera access to report incidents. Please enable camera permission in Settings.',
+            ),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('Cancel'),
+                onPressed: () => Navigator.pop(context),
+              ),
+              CupertinoDialogAction(
+                child: const Text('Open Settings'),
+                onPressed: () {
+                  Navigator.pop(context);
+                  openAppSettings();
+                },
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showCupertinoDialog(
+      context: context,
+      builder:
+          (context) => CupertinoAlertDialog(
+            title: const Text('Error'),
+            content: Text(message),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('OK'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showSuccessDialog(String message) {
+    showCupertinoDialog(
+      context: context,
+      builder:
+          (context) => CupertinoAlertDialog(
+            title: const Text('Success'),
+            content: Text(message),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('OK'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+    );
   }
 
   void onTap(value) {
@@ -138,87 +212,127 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  @override
-  void initState() {
-    setup(widget.username, widget.password);
-    super.initState();
-    _checkLoginStatus(); // Check login status when app starts
-  }
-
   Future<void> _logout() async {
     var userDataService = locator<UserDataService>();
     await userDataService.logout();
-    return;
-  }
 
-  // Function to check if user is logged in
-  Future<void> _checkLoginStatus() async {
-    var userDataService = locator<UserDataService>();
-
-    // Check if the user is logged in
-    bool isLoggedIn =
-        await userDataService
-            .isLoggedIn(); // Assume you have a method to check login status
-
-    if (!isLoggedIn) {
-      // If not logged in, redirect to the SignUp page
+    if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => SignInPage()),
+        CupertinoPageRoute(builder: (context) => const SignInPage()),
       );
     }
+  }
+
+  Future<void> _checkLoginStatus() async {
+    var userDataService = locator<UserDataService>();
+    bool isLoggedIn = await userDataService.isLoggedIn();
+
+    if (!isLoggedIn && mounted) {
+      Navigator.pushReplacement(
+        context,
+        CupertinoPageRoute(builder: (context) => const SignInPage()),
+      );
+    }
+  }
+
+  void _showLogoutDialog() {
+    showCupertinoDialog(
+      context: context,
+      builder:
+          (context) => CupertinoAlertDialog(
+            title: const Text('Sign Out'),
+            content: const Text('Are you sure you want to sign out?'),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('Cancel'),
+                onPressed: () => Navigator.pop(context),
+              ),
+              CupertinoDialogAction(
+                isDestructiveAction: true,
+                child: const Text('Sign Out'),
+                onPressed: () {
+                  Navigator.pop(context);
+                  _logout();
+                },
+              ),
+            ],
+          ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.blueGrey.shade800,
-        title: Text(
-          widget.title,
-          style: TextStyle(color: Colors.blue.shade300, fontSize: 35, fontWeight: FontWeight.w800),
-        ),
-        centerTitle: true,
+      backgroundColor: const Color(0xFF000000),
+      appBar: CustomSlidingAppBar(
+        title: 'NavRakshak',
+        navItems: const ['Home', 'Map', 'Profile'],
+        currentIndex: _index,
+        onNavChanged: (index) => setState(() => _index = index),
         actions: [
-          // Logout Icon on the right side of the AppBar
-          IconButton(
-            icon: Icon(Icons.exit_to_app,size: 30,), // Logout icon
-            onPressed: () {
-              // Add your logout functionality here
-              _logout();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => SignInPage()),
-              );
-            },
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: _showLogoutDialog,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: CupertinoColors.systemRed.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                CupertinoIcons.square_arrow_right,
+                color: CupertinoColors.systemRed,
+                size: 20,
+              ),
+            ),
           ),
         ],
       ),
-      extendBody: true, // Allow body to go behind bottom nav
-      body: _getBody(), // Function to select body content
-      floatingActionButton:
-          _index == 0
-              ? FloatingActionButton(
-                onPressed: _pickImage, // Trigger the image picking when clicked
-                child: const Icon(CupertinoIcons.camera_fill),
-              )
-              : null, // If the index is not 0, don't display the FAB
+      extendBody: true,
+      body: Stack(
+        children: [
+          _getBody(),
+
+          // Floating Action Button for Camera (only on Home page)
+          if (_index == 0)
+            Positioned(
+              right: 20,
+              bottom: 100,
+              child: GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemBlue,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: CupertinoColors.systemBlue.withOpacity(0.3),
+                        blurRadius: 20,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.camera_fill,
+                    color: CupertinoColors.white,
+                    size: 28,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: IOSStyleNavBar(
         currentIndex: _index,
         onTap: (index) => setState(() => _index = index),
         items: [
-          NavBarItem(
-            icon: CupertinoIcons.house_fill,
-            label: 'Home',
-          ),
-          NavBarItem(
-            icon: CupertinoIcons.map_fill,
-            label: 'Map',
-          ),
-          NavBarItem(
-            icon: CupertinoIcons.person_fill,
-            label: 'Profile',
-          ),
+          NavBarItem(icon: CupertinoIcons.house_fill, label: 'Home'),
+          NavBarItem(icon: CupertinoIcons.map_fill, label: 'Map'),
+          NavBarItem(icon: CupertinoIcons.person_fill, label: 'Profile'),
         ],
       ),
     );
@@ -228,15 +342,15 @@ class _MyHomePageState extends State<MyHomePage> {
     var userData = locator<UserDataService>();
     switch (_index) {
       case 0:
-        return HomeView(onTap: onTap); // Home Screen
+        return HomeView(onTap: onTap);
       case 1:
         return Mapview(onTap: onTap);
       case 2:
         return ProfilePage(userDataService: userData);
       case 3:
-        return CheckboxPage(); // Map Routing Screen
+      // return CheckboxPage();
       default:
-        return HomeView(onTap: onTap); // Default to Home Screen
+        return HomeView(onTap: onTap);
     }
   }
 }

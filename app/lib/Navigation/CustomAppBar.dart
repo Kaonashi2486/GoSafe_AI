@@ -2,7 +2,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-class CustomSlidingAppBar extends StatefulWidget implements PreferredSizeWidget {
+class CustomSlidingAppBar extends StatefulWidget
+    implements PreferredSizeWidget {
   final String title;
   final List<String> navItems;
   final int currentIndex;
@@ -19,112 +20,77 @@ class CustomSlidingAppBar extends StatefulWidget implements PreferredSizeWidget 
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 60);
+  Size get preferredSize => const Size.fromHeight(80);
 
   @override
   State<CustomSlidingAppBar> createState() => _CustomSlidingAppBarState();
 }
 
-class _CustomSlidingAppBarState extends State<CustomSlidingAppBar> {
+class _CustomSlidingAppBarState extends State<CustomSlidingAppBar>
+    with TickerProviderStateMixin {
+  late AnimationController _slideController;
+  late Animation<double> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _slideAnimation = CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _slideController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
+        color: Color(0xFF000000),
         border: Border(
-          bottom: BorderSide(
-            color: Colors.grey.withOpacity(0.2),
-            width: 0.5,
-          ),
+          bottom: BorderSide(color: Color(0xFF2C2C2E), width: 0.5),
         ),
       ),
-      child: Column(
-        children: [
-          // Main App Bar Content
-          Container(
-            height: kToolbarHeight,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  widget.title,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                Row(
-                  children: widget.actions,
-                ),
-              ],
-            ),
-          ),
-
-          // Sliding Navigation
-          Container(
-            height: 60,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Material(
-              color: Colors.transparent,
-              child: Stack(
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // Main App Bar Content
+            Container(
+              height: 70,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Navigation Items
+                  // App Title with Icon
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: List.generate(widget.navItems.length, (index) {
-                      final isSelected = index == widget.currentIndex;
-                      return GestureDetector(
-                        onTap: () => widget.onNavChanged(index),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            widget.navItems[index],
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.w500,
-                              color: isSelected
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Colors.grey.shade400,
-                            ),
-                          ),
+                    children: [
+                      Text(
+                        widget.title,
+                        style: const TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w600,
+                          color: CupertinoColors.white,
+                          letterSpacing: -0.5,
                         ),
-                      );
-                    }),
-                  ),
-
-                  // Sliding Indicator
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    left: (MediaQuery.of(context).size.width /
-                        widget.navItems.length) *
-                        widget.currentIndex + 24,
-                    bottom: 0,
-                    child: Container(
-                      width: (MediaQuery.of(context).size.width - 48) /
-                          widget.navItems.length,
-                      height: 3,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(2),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

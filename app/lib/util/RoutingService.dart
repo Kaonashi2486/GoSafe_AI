@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:hacknova/util/TOMTOM_API.dart';
+// import 'package:hacknova/util/TOMTOM_API.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
@@ -26,6 +26,7 @@ class RoutingService {
   }
 
   static Future<String?> getAddressFromCoordinates(LatLng coordinates) async {
+    var TOMTOM_API_KEY = "5S942FW5vWvlAV9u2hGGEqGUniBut2X9";
     final String url =
         "https://api.tomtom.com/search/2/reverseGeocode/${coordinates.latitude},${coordinates.longitude}.json?key=$TOMTOM_API_KEY";
 
@@ -47,6 +48,7 @@ class RoutingService {
   // 🔎 Convert Address to LatLng (Geocoding API)
   // Get Coordinates from Address (Already Present)
   static Future<LatLng?> getCoordinatesFromAddress(String address) async {
+    var TOMTOM_API_KEY = "5S942FW5vWvlAV9u2hGGEqGUniBut2X9";
     final String url =
         "https://api.tomtom.com/search/2/geocode/$address.json?key=$TOMTOM_API_KEY";
 
@@ -65,6 +67,7 @@ class RoutingService {
 
   // Get District from LatLng using TomTom Reverse Geocoding API
   static Future<String?> getDistrictFromCoordinates(LatLng coordinates) async {
+    var TOMTOM_API_KEY = "5S942FW5vWvlAV9u2hGGEqGUniBut2X9";
     final String url =
         "https://api.tomtom.com/search/2/reverseGeocode/${coordinates.latitude},${coordinates.longitude}.json?key=$TOMTOM_API_KEY";
 
@@ -96,6 +99,7 @@ class RoutingService {
     double endLng,
     String travelMode,
   ) async {
+    var TOMTOM_API_KEY = "5S942FW5vWvlAV9u2hGGEqGUniBut2X9";
     final String url =
         "https://api.tomtom.com/routing/1/calculateRoute/$startLat,$startLng:$endLat,$endLng/json"
         "?routeType=fastest&maxAlternatives=2&traffic=true&travelMode=$travelMode&key=$TOMTOM_API_KEY";
@@ -153,6 +157,7 @@ class RoutingService {
   }
 
   static Future<List<String>> getSearchSuggestions(String query) async {
+    var TOMTOM_API_KEY = "5S942FW5vWvlAV9u2hGGEqGUniBut2X9";
     final String url =
         "https://api.tomtom.com/search/2/search/$query.json?key=$TOMTOM_API_KEY&limit=5";
 
