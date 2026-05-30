@@ -1,6 +1,6 @@
 ## System Architecture
 
-![System Architecture]()
+![System Architecture](System Arch.png)
 # GoSafe AI
 
 GoSafe AI - Your Intelligent Travel Safety Companion 🚀
