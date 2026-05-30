@@ -1,4 +1,6 @@
+## System Architecture
 
+![System Architecture]()
 # GoSafe AI
 
 GoSafe AI - Your Intelligent Travel Safety Companion 🚀
